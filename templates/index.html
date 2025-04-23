@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interpolación de Consumo Eléctrico</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Interpolación del Consumo Eléctrico</h1>
+    <form id="uploadForm">
+        <input type="file" id="file" accept=".csv" />
+        <button type="submit">Cargar Datos</button>
+    </form>
+    <canvas id="myChart" width="400" height="200"></canvas>
+
+    <script>
+        $('#uploadForm').on('submit', function(event) {
+            event.preventDefault();
+            var fileInput = document.getElementById("file");
+            var formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            $.ajax({
+                url: '/upload',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    // Procesar los resultados y graficar
+                    const labels = response.instants;
+                    const data = response.values;
+
+                    var ctx = document.getElementById('myChart').getContext('2d');
+                    var myChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Consumo Interpolado (kWh)',
+                                data: data,
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                },
+                error: function(err) {
+                    alert("Error: " + err.responseJSON.error);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
