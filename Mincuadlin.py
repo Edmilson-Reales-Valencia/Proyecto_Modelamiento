@@ -18,6 +18,7 @@ def mincuadlin(tiempo_dias, consumo_diario, dias_proyeccion, tarifa_kwh):
     direccion = "creciente" if m > 0 else "decreciente" if m < 0 else "estable"
     cambio_porcentual = ((m * len(tiempo_dias) + b) - np.mean(consumo_diario)) / np.mean(consumo_diario) * 100 if np.mean(consumo_diario) != 0 else 0
 
+
     return {
         "gastos": {
             "gasto_proyectado_diario": gasto_estimado_diario,
