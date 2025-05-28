@@ -730,3 +730,51 @@
                 }
             });
         }
+
+        function createGastosStats(data) {
+            const statsGrid = document.getElementById('estadisticasGastos');
+            const gastos = data.estimacion_gastos;
+            
+            const gastosCards = [
+                {
+                    label: 'Gasto Histórico Total',
+                    value: '$' + gastos.gastos.gasto_historico_total.toFixed(2),
+                    icon: '📊'
+                },
+                {
+                    label: 'Gasto Proyectado Total',
+                    value: '$' + gastos.gastos.gasto_proyectado_total.toFixed(2),
+                    icon: '💰'
+                },
+                {
+                    label: 'Gasto Promedio Diario',
+                    value: '$' + gastos.gastos.gasto_promedio_diario_proyectado.toFixed(2),
+                    icon: '📅'
+                },
+                {
+                    label: 'Diferencia Mensual',
+                    value: (gastos.resumen.ahorro_o_costo_adicional_mensual >= 0 ? '+$' : '-$') + Math.abs(gastos.resumen.ahorro_o_costo_adicional_mensual).toFixed(2),
+                    icon: gastos.resumen.ahorro_o_costo_adicional_mensual >= 0 ? '📈' : '📉'
+                },
+                {
+                    label: 'Tarifa Aplicada',
+                    value: '$' + gastos.gastos.tarifa_kwh.toFixed(3) + '/kWh',
+                    icon: '⚡'
+                },
+                {
+                    label: 'Consumo Promedio Proyectado',
+                    value: gastos.proyeccion.consumo_promedio_proyectado.toFixed(2) + ' kWh',
+                    icon: '🔋'
+                }
+            ];
+
+            statsGrid.innerHTML = gastosCards.map(stat => `
+                <div class="stat-card">
+                    <div class="stat-value">${stat.icon} ${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
