@@ -1,66 +1,732 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interpolación de Consumo Eléctrico</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Interpolación Multinivel - Consumo Eléctrico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .upload-section {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 2px dashed #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .upload-section.dragover {
+            border-color: #764ba2;
+            background: rgba(118, 75, 162, 0.1);
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        input[type="file"] {
+            padding: 12px 20px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .info-panel {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border-left: 5px solid #e17055;
+        }
+
+        .info-panel h3 {
+            color: #2d3436;
+            margin-bottom: 10px;
+        }
+
+        .info-panel p {
+            color: #636e72;
+            line-height: 1.6;
+        }
+
+        .info-panel ul {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        .info-panel li {
+            margin-bottom: 5px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transform: perspective(1000px) rotateX(0deg);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: perspective(1000px) rotateX(5deg) translateY(-5px);
+            box-shadow: 0 15px 30px rgba(116, 185, 255, 0.4);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .error-message {
+            background: linear-gradient(135deg, #ff7675 0%, #e84393 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .success-message {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .level-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .level-1 { background-color: rgba(0, 0, 255, 0.3); }
+        .level-2 { background-color: blue; }
+        .level-3 { background-color: green; }
+        .level-4 { background-color: red; }
+
+        .server-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: 500;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .server-status.online {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+        }
+
+        .server-status.offline {
+            background: linear-gradient(45deg, #ff7675, #e84393);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .file-input-wrapper {
+                flex-direction: column;
+            }
+
+            .server-status {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Interpolación del Consumo Eléctrico</h1>
-    <form id="uploadForm">
-        <input type="file" id="file" accept=".csv" />
-        <button type="submit">Cargar Datos</button>
-    </form>
-    <canvas id="myChart" width="400" height="200"></canvas>
+    <div class="server-status" id="serverStatus">🔄 Verificando servidor...</div>
+
+    <div class="container">
+        <h1>📊 Interpolación Multinivel</h1>
+        <h2 style="text-align: center; color: #666; margin-bottom: 30px;">Análisis de Consumo Eléctrico</h2>
+
+        <div class="info-panel">
+            <h3>📝 Instrucciones</h3>
+            <p>Sube un archivo CSV con columnas 'Tiempo' y 'Consumo'. El sistema procesará los datos en 4 niveles:</p>
+            <ul>
+                <li><span class="level-indicator level-1"></span><strong>Nivel 1:</strong> Interpolación a 15 minutos</li>
+                <li><span class="level-indicator level-2"></span><strong>Nivel 2:</strong> Promedio horario</li>
+                <li><span class="level-indicator level-3"></span><strong>Nivel 3:</strong> Suma diaria</li>
+                <li><span class="level-indicator level-4"></span><strong>Nivel 4:</strong> Interpolación diaria suavizada</li>
+            </ul>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".csv" />
+                <button id="processBtn" onclick="processFile()">🔄 Procesar Datos</button>
+            </div>
+            
+            <div class="prediction-controls" style="margin-top: 20px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                <div class="control-group">
+                    <label for="diasProyeccion" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">📅 Días a proyectar:</label>
+                    <input type="number" id="diasProyeccion" value="30" min="1" max="365" style="padding: 8px 12px; border: 2px solid #667eea; border-radius: 8px; width: 100px; text-align: center;">
+                </div>
+                <div class="control-group">
+                    <label for="tarifaKwh" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">💰 Tarifa ($/kWh):</label>
+                    <input type="number" id="tarifaKwh" value="0.15" min="0.01" max="10" step="0.01" style="padding: 8px 12px; border: 2px solid #667eea; border-radius: 8px; width: 100px; text-align: center;">
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Procesando datos en el servidor...</p>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div id="resultsContainer" style="display: none;">
+            <div class="chart-container">
+                <canvas id="chart" width="900" height="400"></canvas>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <!-- Statistics will be populated here -->
+            </div>
+
+            <div id="gastosFuturos" class="chart-container" style="margin-top: 20px;">
+                <h3 style="text-align: center; color: #333; margin-bottom: 20px;">💰 Estimación de Gastos Futuros</h3>
+                <div id="tendenciaInfo" class="info-panel"></div>
+                <canvas id="chartGastos" width="900" height="300"></canvas>
+                <div id="estadisticasGastos" class="stats-grid" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
-        $('#uploadForm').on('submit', function(event) {
-            event.preventDefault();
-            var fileInput = document.getElementById("file");
-            var formData = new FormData();
-            formData.append("file", fileInput.files[0]);
+        // Configuration - usando rutas relativas para evitar CORS
+        let chart = null;
+        let chartGastos = null;
+        let serverOnline = false;
 
-            $.ajax({
-                url: '/upload',
-                type: 'POST',
-                data: formData,
-                contentType: false,
-                processData: false,
-                success: function(response) {
-                    // Procesar los resultados y graficar
-                    const labels = response.instants;
-                    const data = response.values;
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServerStatus();
+            setupDragAndDrop();
+        });
 
-                    var ctx = document.getElementById('myChart').getContext('2d');
-                    var myChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Consumo Interpolado (kWh)',
-                                data: data,
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {
-                                y: {
-                                    beginAtZero: true
-                                }
-                            }
-                        }
-                    });
-                },
-                error: function(err) {
-                    alert("Error: " + err.responseJSON.error);
+        async function checkServerStatus() {
+            const statusElement = document.getElementById('serverStatus');
+            
+            try {
+                const response = await axios.get('/health', { timeout: 5000 });
+                if (response.status === 200) {
+                    serverOnline = true;
+                    statusElement.className = 'server-status online';
+                    statusElement.innerHTML = '🟢 Servidor conectado';
+                    document.getElementById('processBtn').disabled = false;
+                }
+            } catch (error) {
+                serverOnline = false;
+                statusElement.className = 'server-status offline';
+                statusElement.innerHTML = '🔴 Servidor desconectado';
+                document.getElementById('processBtn').disabled = true;
+                showMessage('⚠️ No se pudo conectar con el servidor.', 'error');
+            }
+        }
+
+        function setupDragAndDrop() {
+            const uploadSection = document.getElementById('uploadSection');
+            
+            uploadSection.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            uploadSection.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            uploadSection.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('fileInput').files = files;
                 }
             });
-        });
-    </script>
-</body>
-</html>
+        }
 
+        function showMessage(message, type = 'error') {
+            const container = document.getElementById('messageContainer');
+            const className = type === 'error' ? 'error-message' : 'success-message';
+            const icon = type === 'error' ? '❌' : '✅';
+            container.innerHTML = `<div class="${className}">${icon} ${message}</div>`;
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    container.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        function clearMessage() {
+            document.getElementById('messageContainer').innerHTML = '';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('processBtn').disabled = show || !serverOnline;
+        }
+
+        async function processFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('Por favor selecciona un archivo CSV.');
+                return;
+            }
+
+            if (!serverOnline) {
+                showMessage('No se puede procesar el archivo. El servidor no está disponible.');
+                return;
+            }
+
+            clearMessage();
+            showLoading(true);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('dias_proyeccion', document.getElementById('diasProyeccion').value);
+            formData.append('tarifa_kwh', document.getElementById('tarifaKwh').value);
+
+            try {
+                const response = await axios.post('/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    },
+                    timeout: 30000 // 30 seconds timeout
+                });
+
+                const data = response.data;
+                
+                // Create chart and stats
+                createChart(data);
+                createStats(data);
+                createGastosChart(data);
+                createGastosStats(data);
+
+                // Show results
+                document.getElementById('resultsContainer').style.display = 'block';
+                document.getElementById('resultsContainer').scrollIntoView({ behavior: 'smooth' });
+                
+                showMessage('✅ Datos procesados exitosamente', 'success');
+
+            } catch (error) {
+                let errorMessage = 'Error desconocido al procesar el archivo.';
+                
+                if (error.response) {
+                    // Server responded with error status
+                    errorMessage = error.response.data.error || `Error del servidor: ${error.response.status}`;
+                } else if (error.request) {
+                    // Request was made but no response received
+                    errorMessage = 'No se pudo conectar con el servidor.';
+                    serverOnline = false;
+                    await checkServerStatus();
+                } else {
+                    // Something else happened
+                    errorMessage = error.message;
+                }
+                
+                showMessage(errorMessage);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function createChart(data) {
+            const ctx = document.getElementById('chart').getContext('2d');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const datasets = [
+                {
+                    label: '📈 15 minutos',
+                    data: data.nivel_15min.valores,
+                    borderColor: 'rgba(0, 0, 255, 0.3)',
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 1
+                },
+                {
+                    label: '⏰ Horario',
+                    data: data.nivel_horario.valores,
+                    borderColor: 'blue',
+                    backgroundColor: 'rgba(0, 0, 255, 0.1)',
+                    fill: false,
+                    tension: 0.2,
+                    pointRadius: 2
+                },
+                {
+                    label: '📅 Diario',
+                    data: data.nivel_diario.valores,
+                    borderColor: 'green',
+                    backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3
+                },
+                {
+                    label: '🔄 Interpolado Diario',
+                    data: data.nivel_interpolado_diario.valores,
+                    borderColor: 'red',
+                    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 0
+                }
+            ];
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.nivel_15min.tiempos,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Análisis Multinivel de Consumo Eléctrico',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '⏰ Tiempo',
+                                font: { weight: 'bold' }
+                            },
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '⚡ Consumo (kWh)',
+                                font: { weight: 'bold' }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+
+        function createStats(data) {
+            const statsGrid = document.getElementById('statsGrid');
+            const stats = data.estadisticas;
+            
+            const statCards = [
+                {
+                    label: 'Puntos 15min',
+                    value: stats.puntos_15min || 0,
+                    icon: '📊'
+                },
+                {
+                    label: 'Promedio Horario',
+                    value: (stats.promedio_horario || 0).toFixed(2) + ' kWh',
+                    icon: '⚡'
+                },
+                {
+                    label: 'Consumo Total',
+                    value: (stats.consumo_total || 0).toFixed(2) + ' kWh',
+                    icon: '🔋'
+                },
+                {
+                    label: 'Días Analizados',
+                    value: stats.dias_analizados || 0,
+                    icon: '📅'
+                },
+                {
+                    label: 'Consumo Máximo Diario',
+                    value: (stats.consumo_max_diario || 0).toFixed(2) + ' kWh',
+                    icon: '📈'
+                }
+            ];
+
+            statsGrid.innerHTML = statCards.map(stat => `
+                <div class="stat-card">
+                    <div class="stat-value">${stat.icon} ${stat.value}</div>
+                    <div class="stat-label">${stat.label}</div>
+                </div>
+            `).join('');
+        }
+
+        function createGastosChart(data) {
+            const ctx = document.getElementById('chartGastos').getContext('2d');
+            const gastos = data.estimacion_gastos;
+            
+            // Crear información de tendencia
+            const tendenciaInfo = document.getElementById('tendenciaInfo');
+            const direccion = gastos.tendencia.direccion;
+            const cambio = gastos.tendencia.cambio_porcentual;
+            const iconoTendencia = direccion === 'creciente' ? '📈' : direccion === 'decreciente' ? '📉' : '➡️';
+            
+            tendenciaInfo.innerHTML = `
+                <h3>${iconoTendencia} Análisis de Tendencia</h3>
+                <p><strong>Tendencia:</strong> ${direccion.charAt(0).toUpperCase() + direccion.slice(1)}</p>
+                <p><strong>Cambio proyectado:</strong> ${cambio > 0 ? '+' : ''}${cambio.toFixed(2)}% respecto al promedio histórico</p>
+                <p><strong>Ecuación de tendencia:</strong> y = ${gastos.tendencia.pendiente.toFixed(4)}x + ${gastos.tendencia.intercepto.toFixed(4)}</p>
+            `;
+
+            // Generar etiquetas para los días futuros
+            const diasFuturos = Array.from({length: gastos.proyeccion.dias}, (_, i) => `Día +${i+1}`);
+
+            if (chartGastos) {
+                chartGastos.destroy();
+            }
+
+            chartGastos = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: diasFuturos,
+                    datasets: [
+                        {
+                            label: '💰 Gasto Diario Proyectado ($)',
+                            data: gastos.gastos.gasto_proyectado_diario,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: '⚡ Consumo Proyectado (kWh)',
+                            data: gastos.proyeccion.consumo_diario,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 2,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `Proyección de Gastos - ${gastos.proyeccion.dias} días`,
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '📅 Días Futuros',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: '💰 Gasto ($)',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: '⚡ Consumo (kWh)',
+                                font: { weight: 'bold' }
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
